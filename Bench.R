@@ -4,14 +4,13 @@ library(gridExtra)
 library(glmnet)
 library(data.table)
 library(psych)
-library(MASS)
 
 ########### Pre-Processing
 xtrain <-rio::import("C:\\Users\\Skylar\\OneDrive\\Documents\\692 - Consulting\\Data\\X_train.csv") %>%
   mutate(BestSquatKg = as.numeric(gsub("\\.\\.", "\\.", BestSquatKg)),
          BestSquatKg = if_else(grepl('-', BestSquatKg), BestSquatKg * -1, BestSquatKg))
 ytrain <-rio::import("C:\\Users\\Skylar\\OneDrive\\Documents\\692 - Consulting\\Data\\y_train.csv") 
-xtest <-rio::import("C:\\Users\\Skylar\\OneDrive\\Documents\\692 - Consulting\\Data\\X_test.csv")
+xtest <-rio::import("C:\\Users\\Skylar\\OneDrive\\Documents\\692 - Consulting\\Data\\X_test.csv") 
 ytest <-rio::import("C:\\Users\\Skylar\\OneDrive\\Documents\\692 - Consulting\\Data\\y_test.csv") %>%
   select(playerId, BestBenchKg) %>%
   mutate(BestBenchKg = if_else(grepl('-', BestBenchKg), BestBenchKg * -1, BestBenchKg))
@@ -40,68 +39,91 @@ BenchDataTest <- xtest %>%
 
 ############# Early visualizations
 ggplot(data = BenchDataTrain, aes(x = BestDeadliftKg, y = BestBenchKg, color = Sex)) +
-  geom_point(size = 1) +
-  facet_wrap(facets = vars(AgeGroup)) +
-  labs(title = "Best Bench Press Single vs Best Deadlift Single by Age Group and Gender",
-       x = "Deadlift Weight (kg)",
-       y = "Bench Press Weight (kg)", 
-       color = "Gender")
-ggplot(data = BenchDataTest, aes(x = BestDeadliftKg, y = BestBenchKg, color = Sex)) +
-  geom_point(size = 1) +
+  geom_point(size = .5) +
   facet_wrap(facets = vars(AgeGroup)) +
   labs(title = "Best Bench Press Single vs Best Deadlift Single by Age Group and Gender",
        x = "Deadlift Weight (kg)",
        y = "Bench Press Weight (kg)", 
        color = "Gender")
 
-pairs.panels(BenchDataTrain[,-c(BenchDataTrain$BestBenchKg)])
-hist(BenchDataTrain$BestBenchKg)
-boxplot(BenchDataTrain$BodyweightKg)
-boxplot(BenchDataTrain$BestBenchKg)
-boxplot(BenchDataTrain$BestSquatKg)
-qqnorm(BenchDataTrain$BestBenchKg)
+boxplot(BenchDataTrain$BodyweightKg,BenchDataTrain$BestSquatKg,BenchDataTrain$BestDeadliftKg,BenchDataTrain$BestBenchKg,
+        main = "Boxplots of Numeric Variables",
+        xlab = "Numeric Variables",
+        ylab = "Frequency",
+        names = c("Bodyweight", "Best Squat Max", "Best Deadlift Max", "Best Bench Max"),
+        col = c("pink","green","purple","white"))
+qqnorm(BenchDataTrain$BestBenchKg,
+       main = "Normal Q-Q Plot of Response Variable")
 qqline(BenchDataTrain$BestBenchKg)
 
-model <- lm(BestBenchKg ~ BodyweightKg + BestSquatKg + Sex + AgeGroup, BenchDataTrain)
-res <- resid(model)
-qqnorm(res)
-qqline(res)
+model <- lm(BestBenchKg ~ BodyweightKg + BestSquatKg + BestDeadliftKg + Sex + AgeGroup, BenchDataTrain)
 
 par(mfrow = c(2,2))
 plot(model)
 
-b <- boxcox(lm(BestBenchKg ~ BodyweightKg + BestSquatKg + Sex + AgeGroup, BenchDataTrain))
-lambda <- b$x[which.max(b$y)]
-lambda
-BenchDataTrain$BodyweightKgtransform <- sqrt(BenchDataTrain$BodyweightKg)
-BenchDataTrain$BestSquatKgtransform <- sqrt(BenchDataTrain$BestSquatKg)
-BenchDataTrain$BestBenchKgtransform <- sqrt(BenchDataTrain$BestBenchKg)
-modeltransform <- lm(BestBenchKgtransform ~ BodyweightKgtransform + BestSquatKgtransform + Sex + AgeGroup, BenchDataTrain)
-restransform <- resid(modeltransform)
-qqnorm(restransform)
-qqline(restransform)
+#Outlier detection and deletion
+cooksd <- cooks.distance(model)
+influential <- as.numeric(names(cooksd)[(cooksd > (4/nrow(BenchDataTrain)))])
+cleaned_data <- BenchDataTrain[-influential, ]
 
-BenchTrainTransform <- subset(BenchDataTrain, select = -c(BodyweightKg, BestSquatKg, BestBenchKg))
-pairs.panels(BenchTrainTransform[,-c(BenchTrainTransform$BestBenchKgtransform)])
-qqnorm(BenchTrainTransform$BestBenchKgtransform)
-qqline(BenchTrainTransform$BestBenchKgtransform)
+#pairs.panels(cleaned_data[,-c(cleaned_data$BestBenchKg)])
+boxplot(cleaned_data$BodyweightKg,cleaned_data$BestSquatKg,cleaned_data$BestDeadliftKg,cleaned_data$BestBenchKg,
+        main = "Boxplots of Numeric Variables without Bad Influential Outliers",
+        xlab = "Numeric Variables",
+        ylab = "Frequency",
+        names = c("Bodyweight", "Best Squat Max", "Best Deadlift Max", "Best Bench Max"),
+        col = c("pink","green","purple","white"))
+
+model_clean <- lm(BestBenchKg ~ BodyweightKg + BestSquatKg + BestDeadliftKg + Sex + AgeGroup, cleaned_data)
 
 par(mfrow = c(2,2))
-plot(modeltransform)
+plot(model_clean)
+
+#Variable transformation
+library(MASS)
+
+b <- boxcox(model_clean)
+lambda <- b$x[which.max(b$y)]
+lambda
+detach("package:MASS", unload=TRUE)
+range(b$x[b$y > max(b$y)-qchisq(0.95,1)/2]) #Doesn't contain 0.5, use lambda instead of sqrt
+
+transform_data = cleaned_data %>%
+  mutate(BodyweightTransform = (BodyweightKg ^ lambda - 1 ) / lambda,
+         SquatTransform = (BestSquatKg ^ lambda - 1 ) / lambda,
+         BenchTransform = (BestBenchKg ^ lambda - 1 ) / lambda,
+         DeadliftTransform = (BestDeadliftKg ^ lambda - 1 ) / lambda) %>%
+  select(playerId, Sex, AgeGroup, BodyweightTransform, SquatTransform, DeadliftTransform, BenchTransform)
+
+model_transform <- lm(BenchTransform ~ BodyweightTransform + SquatTransform + DeadliftTransform + Sex + AgeGroup, transform_data)
+
+
+par(mfrow = c(2,2))
+plot(model_transform)
+
+boxplot(transform_data$BodyweightTransform,transform_data$SquatTransform,transform_data$DeadliftTransform,transform_data$BenchTransform,
+        main = "Boxplots of Numeric Variables with Boxcox Transformation",
+        xlab = "Numeric Variables",
+        ylab = "Frequency",
+        names = c("Bodyweight", "Best Squat Max", "Best Deadlift Max", "Best Bench Max"),
+        col = c("pink","green","purple", "white"))
+
+pairs.panels(transform_data)
+qqnorm(transform_data$BenchTransform,
+       main = "Normal Q-Q Plot of Response Variable with Boxcox Transformation")
+qqline(transform_data$BenchTransform)
 
 # Sample too large to perform Shapiro-Wilks test (would tend to reject)
 
 ############## Variable selection
-BenchDataTrain$Sex <- as.factor(BenchDataTrain$Sex)
-BenchDataTrain$AgeGroup <- as.factor(BenchDataTrain$AgeGroup)
-BenchDataTrain$Equipment <- as.factor(BenchDataTrain$Equipment)
+transform_data$Sex <- as.factor(transform_data$Sex)
+transform_data$AgeGroup <- as.factor(transform_data$AgeGroup)
 
-x_quant <- BenchDataTrain[, -c(2,3,4,9,10)]
-x_sex  <- model.matrix(~ Sex - 1, BenchDataTrain)
-x_Equip  <- model.matrix(~ Equipment - 1, BenchDataTrain)
-x_Age  <- model.matrix(~ AgeGroup - 1, BenchDataTrain)
-x <- as.matrix(cbind(x_quant, x_sex, x_Equip, x_Age))
-y <- BenchDataTrain$BestBenchKg
+x_quant <- transform_data[, -c(2,3,7)]
+x_sex  <- model.matrix(~ Sex - 1, transform_data)[,1]
+x_Age  <- model.matrix(~ AgeGroup - 1, transform_data)[,1]
+x <- as.matrix(cbind(x_quant, x_sex, x_Age))
+y <- transform_data$BenchTransform
 
 lasso_model <- glmnet(x, y, family = "gaussian")
 cv_model <- cv.glmnet(x, y, family = "gaussian")
@@ -110,3 +132,24 @@ lambda_lse <- cv_model$lambda.1se
 lasso_coeflse <- coef(lasso_model, s = lambda_lse)
 lasso_coefmin <- coef(lasso_model, s = lambda_min)
 # Keep BodyWeight, Squat, Sex, and AgeGroup
+
+train_final <- transform_data %>%
+  mutate(Sex = as.character(Sex),
+         AgeGroup = as.character(AgeGroup),
+         BodyweightKg = BodyweightTransform,
+         BestSquatKg = SquatTransform,
+         BestBenchKg = BenchTransform) %>%
+  select(playerId, Sex, AgeGroup, BodyweightKg, BestSquatKg, BestBenchKg)
+
+####### Prediction Intervals
+final_model <- lm(BestBenchKg ~ BodyweightKg + BestSquatKg + Sex + AgeGroup, train_final)
+final_test <- BenchDataTest %>%
+  select(playerId, Sex, AgeGroup, BodyweightKg, BestSquatKg)
+ytest <- BenchDataTest %>%
+  select(playerId, BestBenchKg)
+predictions <- predict(final_model, final_test, interval = "prediction")
+predictions <- as.data.frame(predictions)
+mse <- mean((predictions$fit - ytest$BestBenchKg)^2)
+rmse <- sqrt(mse)
+r_squared <- 1 - sum((ytest$BestBenchKg - predictions$fit)^2) / sum((ytest$BestBenchKg - mean(ytest$BestBenchKg))^2)
+adjusted_r_squared <- 1 - (1 - r_squared) * ((nrow(final_test) - 1) / (nrow(final_test) - 4 - 1))
