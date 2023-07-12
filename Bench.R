@@ -38,7 +38,7 @@ BenchDataTest <- xtest %>%
   filter(!is.na(Age))
 
 ############# Early visualizations
-ggplot(data = BenchDataTrain, aes(x = BestDeadliftKg, y = BestBenchKg, color = Sex)) +
+ggplot(data = BenchDataTrain, aes(x = BestSquatKg, y = BestBenchKg, color = Sex)) +
   geom_point(size = .5) +
   facet_wrap(facets = vars(AgeGroup)) +
   labs(title = "Best Bench Press Single vs Best Deadlift Single by Age Group and Gender",
@@ -141,15 +141,65 @@ train_final <- transform_data %>%
          BestBenchKg = BenchTransform) %>%
   select(playerId, Sex, AgeGroup, BodyweightKg, BestSquatKg, BestBenchKg)
 
+test_final <- BenchDataTest %>%
+  mutate(BodyweightTransform = (BodyweightKg ^ lambda - 1 ) / lambda,
+         SquatTransform = (BestSquatKg ^ lambda - 1 ) / lambda,
+         BenchTransform = (BestBenchKg ^ lambda - 1 ) / lambda) %>%
+  select(playerId, Sex, AgeGroup, BodyweightTransform, SquatTransform, BenchTransform) %>%
+  mutate(BodyweightKg = BodyweightTransform,
+         BestSquatKg = SquatTransform,
+         BestBenchKg = BenchTransform) %>%
+  select(playerId, Sex, AgeGroup, BodyweightKg, BestSquatKg, BestBenchKg)
+
 ####### Prediction Intervals
+library(Metrics)
+
 final_model <- lm(BestBenchKg ~ BodyweightKg + BestSquatKg + Sex + AgeGroup, train_final)
-final_test <- BenchDataTest %>%
+final_test <- test_final %>%
   select(playerId, Sex, AgeGroup, BodyweightKg, BestSquatKg)
-ytest <- BenchDataTest %>%
+ytest <- test_final %>%
   select(playerId, BestBenchKg)
 predictions <- predict(final_model, final_test, interval = "prediction")
 predictions <- as.data.frame(predictions)
-mse <- mean((predictions$fit - ytest$BestBenchKg)^2)
+mse <- mean((predictions$fit - ytest$BestBenchKg)^2) #more sensitive to outliers
 rmse <- sqrt(mse)
+mae <- mae(ytest$BestBenchKg, predictions$fit) #not sensitive to outliers
 r_squared <- 1 - sum((ytest$BestBenchKg - predictions$fit)^2) / sum((ytest$BestBenchKg - mean(ytest$BestBenchKg))^2)
 adjusted_r_squared <- 1 - (1 - r_squared) * ((nrow(final_test) - 1) / (nrow(final_test) - 4 - 1))
+
+####### Plot prediction intervals vs Actual
+back_trans <- test_final %>%
+  mutate(BodyweightTransform = (BodyweightKg * lambda + 1) ^ (1 / lambda),
+         SquatTransform = (BestSquatKg * lambda + 1) ^ (1 / lambda),
+         BenchTransform = (BestBenchKg * lambda + 1) ^ (1 / lambda))
+full_test <- merge(back_trans, predictions, by = "row.names", all.x = TRUE) %>%
+  mutate(BodyweightKg = BodyweightTransform,
+         BestSquatKg = SquatTransform,
+         BestBenchKg = BenchTransform,
+         Predict = (fit * lambda + 1) ^ (1 / lambda),
+         LowerBound = (lwr * lambda + 1) ^ (1 / lambda),
+         UpperBound = (upr * lambda + 1) ^ (1 / lambda)) %>%
+  select(playerId, Sex, AgeGroup, BodyweightKg, BestSquatKg, BestBenchKg, Predict, LowerBound, UpperBound)
+
+set.seed(8)
+ggplot(data = sample_n(full_test, 1000), mapping = aes(x = BodyweightKg, y = BestBenchKg, color = Sex)) +
+  geom_point() +
+  geom_line(aes(y = LowerBound)) +
+  geom_line(aes(y = UpperBound)) +
+  facet_wrap(facets = vars(AgeGroup)) +
+  labs(title = "Actual Values vs. Prediction Intervals for Best Bench Press Weight by Bodyweight, Age Group, and Gender",
+       x = "Bodyweight (kg)",
+       y = "Bench Press Weight (kg)", 
+       color = "Gender")
+
+set.seed(8)
+ggplot(data = sample_n(full_test, 1000), mapping = aes(x = BestSquatKg, y = BestBenchKg, color = Sex)) +
+  geom_point() +
+  geom_line(aes(y = LowerBound)) +
+  geom_line(aes(y = UpperBound)) +
+  facet_wrap(facets = vars(AgeGroup)) +
+  labs(title = "Actual Values vs. Prediction Intervals for Best Bench Press Weight by Best Squat Weight, Age Group, and Gender",
+       x = "Squat Weight (kg)",
+       y = "Bench Press Weight (kg)", 
+       color = "Gender")
+
