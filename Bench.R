@@ -188,11 +188,17 @@ ggplot(data = sample_n(full_test, 1000), mapping = aes(x = BodyweightKg, y = Bes
   geom_line(aes(y = UpperBound)) +
   geom_ribbon(aes(ymin=LowerBound,ymax=UpperBound), fill= "grey", alpha=0.4) +
   facet_wrap(facets = vars(AgeGroup)) +
+  theme_bw() +
   labs(title = "Actual Values vs. Prediction Intervals for Best Bench Press Weight by Bodyweight, Age Group, and Gender",
        x = "Bodyweight (kg)",
        y = "Bench Press Weight (kg)", 
        color = "Gender") +
-  theme_bw()
+  theme(plot.title = element_text(size = 19, hjust = 0.5, face = "bold"),
+        axis.title = element_text(size=14 , face="bold"),
+        axis.text=element_text(size=12),
+        legend.title = element_text(size=16, face = "bold"),
+        legend.text = element_text(size=12),
+        legend.key.size = unit(1, 'cm')) 
 
 set.seed(8)
 ggplot(data = sample_n(full_test, 1000), mapping = aes(x = BestSquatKg, y = BestBenchKg, color = Sex)) +
@@ -201,9 +207,15 @@ ggplot(data = sample_n(full_test, 1000), mapping = aes(x = BestSquatKg, y = Best
   geom_line(aes(y = UpperBound)) +
   geom_ribbon(aes(ymin=LowerBound,ymax=UpperBound), fill= "grey", alpha=0.4) +
   facet_wrap(facets = vars(AgeGroup)) +
+  theme_bw() +
   labs(title = "Actual Values vs. Prediction Intervals for Best Bench Press Weight by Best Squat Weight, Age Group, and Gender",
        x = "Squat Weight (kg)",
        y = "Bench Press Weight (kg)", 
        color = "Gender") +
-  theme_bw()
+  theme(plot.title = element_text(size = 18, hjust = 0.5, face = "bold"),
+      axis.title = element_text(size=14 , face="bold"),
+      axis.text=element_text(size=12),
+      legend.title = element_text(size=15, face = "bold"),
+      legend.text = element_text(size=12),
+      legend.key.size = unit(1, 'cm')) 
 
