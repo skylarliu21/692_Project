@@ -186,20 +186,24 @@ ggplot(data = sample_n(full_test, 1000), mapping = aes(x = BodyweightKg, y = Bes
   geom_point() +
   geom_line(aes(y = LowerBound)) +
   geom_line(aes(y = UpperBound)) +
+  geom_ribbon(aes(ymin=LowerBound,ymax=UpperBound), fill= "grey", alpha=0.4) +
   facet_wrap(facets = vars(AgeGroup)) +
   labs(title = "Actual Values vs. Prediction Intervals for Best Bench Press Weight by Bodyweight, Age Group, and Gender",
        x = "Bodyweight (kg)",
        y = "Bench Press Weight (kg)", 
-       color = "Gender")
+       color = "Gender") +
+  theme_bw()
 
 set.seed(8)
 ggplot(data = sample_n(full_test, 1000), mapping = aes(x = BestSquatKg, y = BestBenchKg, color = Sex)) +
   geom_point() +
   geom_line(aes(y = LowerBound)) +
   geom_line(aes(y = UpperBound)) +
+  geom_ribbon(aes(ymin=LowerBound,ymax=UpperBound), fill= "grey", alpha=0.4) +
   facet_wrap(facets = vars(AgeGroup)) +
   labs(title = "Actual Values vs. Prediction Intervals for Best Bench Press Weight by Best Squat Weight, Age Group, and Gender",
        x = "Squat Weight (kg)",
        y = "Bench Press Weight (kg)", 
-       color = "Gender")
+       color = "Gender") +
+  theme_bw()
 
