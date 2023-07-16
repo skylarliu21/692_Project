@@ -83,6 +83,7 @@ ggplot(data = BenchDataTrain, aes(x = BodyweightKg, y = BestBenchKg, color = Sex
         legend.text = element_text(size=12),
         legend.key.size = unit(1, 'cm')) 
 
+par(cex.main=2.5, cex.lab = 1.5, cex.axis = 1.5 )
 boxplot(BenchDataTrain$BodyweightKg,BenchDataTrain$BestSquatKg,BenchDataTrain$BestDeadliftKg,BenchDataTrain$BestBenchKg,
         main = "Boxplots of Numeric Variables",
         xlab = "Numeric Variables",
@@ -104,6 +105,7 @@ influential <- as.numeric(names(cooksd)[(cooksd > (4/nrow(BenchDataTrain)))])
 cleaned_data <- BenchDataTrain[-influential, ]
 
 #pairs.panels(cleaned_data[,-c(cleaned_data$BestBenchKg)])
+par(mfrow = c(1,1))
 boxplot(cleaned_data$BodyweightKg,cleaned_data$BestSquatKg,cleaned_data$BestDeadliftKg,cleaned_data$BestBenchKg,
         main = "Boxplots of Numeric Variables without Bad Influential Outliers",
         xlab = "Numeric Variables",
@@ -138,6 +140,7 @@ model_transform <- lm(BenchTransform ~ BodyweightTransform + SquatTransform + De
 par(mfrow = c(2,2))
 plot(model_transform)
 
+par(mfrow = c(1,1))
 boxplot(transform_data$BodyweightTransform,transform_data$SquatTransform,transform_data$DeadliftTransform,transform_data$BenchTransform,
         main = "Boxplots of Numeric Variables with Boxcox Transformation",
         xlab = "Numeric Variables",
@@ -145,7 +148,7 @@ boxplot(transform_data$BodyweightTransform,transform_data$SquatTransform,transfo
         names = c("Bodyweight", "Best Squat Max", "Best Deadlift Max", "Best Bench Max"),
         col = c("pink","green","purple", "white"))
 
-pairs.panels(transform_data)
+pairs.panels(train_final, main = "Correlation Matrix of Transformed Data")
 qqnorm(transform_data$BenchTransform,
        main = "Normal Q-Q Plot of Response Variable with Boxcox Transformation")
 qqline(transform_data$BenchTransform)
