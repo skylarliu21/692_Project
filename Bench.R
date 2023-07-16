@@ -41,10 +41,47 @@ BenchDataTest <- xtest %>%
 ggplot(data = BenchDataTrain, aes(x = BestSquatKg, y = BestBenchKg, color = Sex)) +
   geom_point(size = .5) +
   facet_wrap(facets = vars(AgeGroup)) +
+  labs(title = "Best Bench Press Single vs Best Squat Single by Age Group and Gender",
+       x = "Squat Weight (kg)",
+       y = "Bench Press Weight (kg)", 
+       color = "Gender") +
+  theme_bw() +
+  theme(plot.title = element_text(size = 18, hjust = 0.5, face = "bold"),
+        axis.title = element_text(size=14),
+        axis.text=element_text(size=12),
+        legend.title = element_text(size=15, face = "bold"),
+        legend.text = element_text(size=12),
+        legend.key.size = unit(1, 'cm')) 
+
+ggplot(data = BenchDataTrain, aes(x = BestDeadliftKg, y = BestBenchKg, color = Sex)) +
+  geom_point(size = .5) +
+  facet_wrap(facets = vars(AgeGroup)) +
   labs(title = "Best Bench Press Single vs Best Deadlift Single by Age Group and Gender",
        x = "Deadlift Weight (kg)",
        y = "Bench Press Weight (kg)", 
-       color = "Gender")
+       color = "Gender") +
+  theme_bw() +
+  theme(plot.title = element_text(size = 18, hjust = 0.5, face = "bold"),
+        axis.title = element_text(size=14),
+        axis.text=element_text(size=12),
+        legend.title = element_text(size=15, face = "bold"),
+        legend.text = element_text(size=12),
+        legend.key.size = unit(1, 'cm')) 
+
+ggplot(data = BenchDataTrain, aes(x = BodyweightKg, y = BestBenchKg, color = Sex)) +
+  geom_point(size = .5) +
+  facet_wrap(facets = vars(AgeGroup)) +
+  labs(title = "Best Bench Press Single vs Body Weight by Age Group and Gender",
+       x = "Body Weight (kg)",
+       y = "Bench Press Weight (kg)", 
+       color = "Gender") +
+  theme_bw() +
+  theme(plot.title = element_text(size = 18, hjust = 0.5, face = "bold"),
+        axis.title = element_text(size=14),
+        axis.text=element_text(size=12),
+        legend.title = element_text(size=15, face = "bold"),
+        legend.text = element_text(size=12),
+        legend.key.size = unit(1, 'cm')) 
 
 boxplot(BenchDataTrain$BodyweightKg,BenchDataTrain$BestSquatKg,BenchDataTrain$BestDeadliftKg,BenchDataTrain$BestBenchKg,
         main = "Boxplots of Numeric Variables",
@@ -189,12 +226,12 @@ ggplot(data = sample_n(full_test, 1000), mapping = aes(x = BodyweightKg, y = Bes
   geom_ribbon(aes(ymin=LowerBound,ymax=UpperBound), fill= "grey", alpha=0.4) +
   facet_wrap(facets = vars(AgeGroup)) +
   theme_bw() +
-  labs(title = "Actual Values vs. Prediction Intervals for Best Bench Press Weight by Bodyweight, Age Group, and Gender",
-       x = "Bodyweight (kg)",
+  labs(title = "Actual Values vs. Prediction Intervals for Best Bench Press Weight by Body Weight, Age Group, and Gender",
+       x = "Body Weight (kg)",
        y = "Bench Press Weight (kg)", 
        color = "Gender") +
   theme(plot.title = element_text(size = 19, hjust = 0.5, face = "bold"),
-        axis.title = element_text(size=14 , face="bold"),
+        axis.title = element_text(size=14),
         axis.text=element_text(size=12),
         legend.title = element_text(size=16, face = "bold"),
         legend.text = element_text(size=12),
@@ -213,9 +250,8 @@ ggplot(data = sample_n(full_test, 1000), mapping = aes(x = BestSquatKg, y = Best
        y = "Bench Press Weight (kg)", 
        color = "Gender") +
   theme(plot.title = element_text(size = 18, hjust = 0.5, face = "bold"),
-      axis.title = element_text(size=14 , face="bold"),
+      axis.title = element_text(size=14),
       axis.text=element_text(size=12),
       legend.title = element_text(size=15, face = "bold"),
       legend.text = element_text(size=12),
       legend.key.size = unit(1, 'cm')) 
-
